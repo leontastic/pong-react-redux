@@ -1,0 +1,19 @@
+{
+  "name": "pong-rx",
+  "version": "0.0.0",
+  "author": "Leon Li <la2li@uwaterloo.ca>",
+  "private": true,
+  "dependencies": {
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4"
+  },
+  "devDependencies": {
+    "react-scripts": "1.0.7"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
