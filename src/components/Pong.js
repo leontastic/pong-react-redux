@@ -2,15 +2,17 @@ import Radium from 'radium'
 import React, { Component } from 'react'
 import { Layer, Circle, Stage } from 'react-konva'
 import { connect } from 'react-redux'
+import multidecorator from 'react-multidecorator'
 import { Observable, Scheduler } from 'rx-dom'
+
 import { setGamePaused, animateGameState } from '../store/actions'
 import makeDispatcher from '../store/helpers/makeDispatcher'
 
 const Ball = ({ x, y }) => <Circle x={x} y={y} radius={5} fill='#a40000' />
 
 class Pong extends Component {
-  constructor (...props) {
-    super(...props)
+  constructor () {
+    super()
 
     this.handleKeyPress = this.handleKeyPress.bind(this)
   }
@@ -39,6 +41,8 @@ class Pong extends Component {
 
   render () {
     const {
+      width = 700,
+      height = 700,
       ballPosition,
       ballVelocity,
       paddle1Position,
@@ -51,7 +55,7 @@ class Pong extends Component {
 
     return (
       <div>
-        <Stage width={700} height={700}>
+        <Stage width={width} height={height}>
           <Layer>
             <Ball {...ballPosition} />
           </Layer>
@@ -71,4 +75,8 @@ const mapDispatchToProps = (dispatch) => ({
   animateGameState: makeDispatcher(dispatch, animateGameState)
 })
 
-export default connect(mapStateToProps, mapDispatchToProps)(Radium(Pong))
+const connectStore = connect(mapStateToProps, mapDispatchToProps)
+
+const decorate = multidecorator(connectStore, Radium)
+
+export default decorate(Pong)
