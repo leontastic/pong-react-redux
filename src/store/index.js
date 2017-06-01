@@ -1,19 +1,15 @@
-import { createStore } from 'redux'
+import { createStore, applyMiddleware, compose } from 'redux'
+import createSagaMiddleware from 'redux-saga'
+import sagas from './sagas'
 import reducers from './reducers'
+import initialState from './initialState'
 
-const initialState = {
-  ballPosition: { x: 0, y: 0 },
-  ballVelocity: { x: 0, y: 0 },
-  paddle1Position: { x: 0, y: 100 },
-  paddle1Velocity: { x: 0, y: 0 },
-  paddle2Position: { x: 0, y: -100 },
-  paddle2Velocity: { x: 0, y: 0 },
-  gamePaused: true,
-  gameScore: 0
-}
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
+const sagaMiddleware = createSagaMiddleware()
+const enhancer = composeEnhancers(applyMiddleware(sagaMiddleware))
 
-const middleware = window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+const store = createStore(reducers, initialState, enhancer)
 
-const store = createStore(reducers, initialState, middleware)
+sagaMiddleware.run(sagas)
 
 export default store
