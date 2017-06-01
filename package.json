@@ -2,6 +2,7 @@
   "name": "pong-react-redux",
   "version": "0.0.0",
   "author": "Leon Li <la2li@uwaterloo.ca>",
+  "homepage": "http://leonli.ca/experiments/pong",
   "private": true,
   "dependencies": {
     "konva": "^1.6.3",
