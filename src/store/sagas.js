@@ -6,7 +6,9 @@ import {
   SET_BALL_POSITION,
   SET_BALL_VELOCITY,
   SET_PADDLE1_POSITION,
+  SET_PADDLE1_VELOCITY,
   SET_PADDLE2_POSITION,
+  SET_PADDLE2_VELOCITY,
   SET_WINDOW_SIZE,
   REQUEST_UPDATE_GAME_STATE,
   REQUEST_COLLISION_CHECK
@@ -55,7 +57,7 @@ const getRectBounds = ({ x, y, width, height }) => {
   return { left, right, top, bottom }
 }
 
-const checkCollision = (rect1, rect2) => {
+const collisionRects = (rect1, rect2) => {
   const rect1Bounds = getRectBounds(rect1)
   const rect2Bounds = getRectBounds(rect2)
 
@@ -67,6 +69,16 @@ const checkCollision = (rect1, rect2) => {
   return leftOverlapsRight && rightOverlapsLeft && bottomOverlapsTop && topOverlapsBottom
 }
 
+const collisionLeft = (rect, windowWidth) => {
+  const rectBounds = getRectBounds(rect)
+  return rectBounds.left < -windowWidth / 2
+}
+
+const collisionRight = (rect, windowWidth) => {
+  const rectBounds = getRectBounds(rect)
+  return rectBounds.right > windowWidth / 2
+}
+
 const makeRect = ({ x, y }, { x: width, y: height }) => ({ x, y, width, height })
 
 function * collisionCheck () {
@@ -76,22 +88,63 @@ function * collisionCheck () {
     ballVelocity,
     paddle1Position,
     paddle1Dimensions,
+    paddle1Velocity,
     paddle2Position,
-    paddle2Dimensions
+    paddle2Dimensions,
+    paddle2Velocity,
+    windowSize
   } = yield select()
 
   const ball = makeRect(ballPosition, { x: ballRadius * 2, y: ballRadius * 2 })
   const paddle1 = makeRect(paddle1Position, paddle1Dimensions)
   const paddle2 = makeRect(paddle2Position, paddle2Dimensions)
 
-  if (checkCollision(ball, paddle1)) {
+  if (collisionRects(ball, paddle1)) {
     const newVelocity = { x: (ball.x - paddle1.x) / paddle1Dimensions.x, y: -Math.abs(ballVelocity.y) }
     yield put(makeAction(SET_BALL_VELOCITY, Vector.fromObject(newVelocity).normalize().toObject()))
   }
 
-  if (checkCollision(ball, paddle2)) {
+  if (collisionRects(ball, paddle2)) {
     const newVelocity = { x: (ball.x - paddle2.x) / paddle2Dimensions.x, y: Math.abs(ballVelocity.y) }
     yield put(makeAction(SET_BALL_VELOCITY, Vector.fromObject(newVelocity).normalize().toObject()))
+  }
+
+  if (collisionLeft(ball, windowSize.width)) {
+    const newVelocity = { x: Math.abs(ballVelocity.x), y: ballVelocity.y }
+    yield put(makeAction(SET_BALL_VELOCITY, Vector.fromObject(newVelocity).normalize().toObject()))
+  }
+
+  if (collisionRight(ball, windowSize.width)) {
+    const newVelocity = { x: -Math.abs(ballVelocity.x), y: ballVelocity.y }
+    yield put(makeAction(SET_BALL_VELOCITY, Vector.fromObject(newVelocity).normalize().toObject()))
+  }
+
+  if (collisionLeft(paddle1, windowSize.width)) {
+    yield all([
+      put(makeAction(SET_PADDLE1_VELOCITY, { x: Math.max(paddle1Velocity.x, 0), y: 0 })),
+      put(makeAction(SET_PADDLE1_POSITION, { x: -windowSize.width / 2 + paddle1.width / 2, y: paddle1.y }))
+    ])
+  }
+
+  if (collisionRight(paddle1, windowSize.width)) {
+    yield all([
+      put(makeAction(SET_PADDLE1_VELOCITY, { x: Math.min(paddle1, 0), y: 0 })),
+      put(makeAction(SET_PADDLE1_POSITION, { x: windowSize.width / 2 - paddle1.width / 2, y: paddle1.y }))
+    ])
+  }
+
+  if (collisionLeft(paddle2, windowSize.width)) {
+    yield all([
+      put(makeAction(SET_PADDLE2_VELOCITY, { x: Math.max(paddle2Velocity.x, 0), y: 0 })),
+      put(makeAction(SET_PADDLE2_POSITION, { x: -windowSize.width / 2 + paddle2.width / 2, y: paddle2.y }))
+    ])
+  }
+
+  if (collisionRight(paddle2, windowSize.width)) {
+    yield all([
+      put(makeAction(SET_PADDLE2_VELOCITY, { x: Math.min(paddle2, 0), y: 0 })),
+      put(makeAction(SET_PADDLE2_POSITION, { x: windowSize.width / 2 - paddle2.width / 2, y: paddle2.y }))
+    ])
   }
 }
 
