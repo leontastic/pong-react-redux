@@ -1,5 +1,5 @@
 {
-  "name": "pong-rx",
+  "name": "pong-react-redux",
   "version": "0.0.0",
   "author": "Leon Li <la2li@uwaterloo.ca>",
   "private": true,
