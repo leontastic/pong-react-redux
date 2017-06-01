@@ -1,7 +1,7 @@
-import { range } from 'lodash'
+import { isNumber, range, toNumber } from 'lodash'
 import Radium from 'radium'
 import React, { Component } from 'react'
-import { Group, Layer, Circle, Rect, Stage } from 'react-konva'
+import { Circle, Group, Layer, Rect, Stage, Text } from 'react-konva'
 import { connect } from 'react-redux'
 import multidecorator from 'react-multidecorator'
 import { DOM, Observable, Scheduler } from 'rx-dom'
@@ -9,6 +9,7 @@ import Vector from 'victor'
 
 import {
   setGamePaused,
+  setGameSpeed,
   setWindowSize,
   setPaddle1Velocity,
   setPaddle2Velocity,
@@ -53,6 +54,7 @@ class Pong extends Component {
     super()
 
     this.handleResize = this.handleResize.bind(this)
+    this.setGameSpeed = this.setGameSpeed.bind(this)
     this.toggleGamePause = this.toggleGamePause.bind(this)
   }
 
@@ -64,10 +66,16 @@ class Pong extends Component {
     this.props.setGamePaused(!this.props.gamePaused)
   }
 
+  setGameSpeed (event) {
+    const speed = event.target.value
+    if (isNumber(toNumber(speed))) this.props.setGameSpeed(speed)
+  }
+
   componentDidMount () {
     const nextAnimationFrame = Observable.interval(0, Scheduler.requestAnimationFrame)
       .timeInterval()
       .pluck('interval')
+      .filter(() => !this.props.gamePaused)
 
     nextAnimationFrame.subscribe(this.props.requestUpdateGameState)
   }
@@ -108,16 +116,15 @@ class Pong extends Component {
   render () {
     const {
       ballPosition,
-      ballVelocity,
       ballRadius,
       paddle1Position,
-      paddle1Velocity,
       paddle1Dimensions,
       paddle2Position,
-      paddle2Velocity,
       paddle2Dimensions,
       gamePaused,
-      gameScore,
+      gameSpeed,
+      paddle1Score,
+      paddle2Score,
       windowSize
     } = this.props
 
@@ -131,13 +138,79 @@ class Pong extends Component {
             <Ball radius={ballRadius} {...normalizeOrigin(ballPosition, { x: 0, y: 0 }, windowDimensions)} />
             <Paddle width={paddle1Dimensions.x} height={paddle1Dimensions.y} {...normalizeOrigin(paddle1Position, paddle1Dimensions, windowDimensions)} />
             <Paddle width={paddle1Dimensions.x} height={paddle1Dimensions.y} {...normalizeOrigin(paddle2Position, paddle2Dimensions, windowDimensions)} />
+            <Group visible={gamePaused}>
+              <Text text='PAUSED' align='center' width={200} height={30} fontSize={24} {...normalizeOrigin({ x: 0, y: -windowDimensions.y / 10 }, { x: 200, y: 30 }, windowDimensions)} />
+              <Text text='Press SPACE to Play' align='center' width={200} height={30} fontSize={18} {...normalizeOrigin({ x: 0, y: windowDimensions.y / 10 }, { x: 200, y: 30 }, windowDimensions)} />
+            </Group>
           </Layer>
         </Stage>
-        <pre style={{ backgroundColor: '#eee' }}>
-          {JSON.stringify(this.props, null, 2)}
-        </pre>
+        <div key='score1' style={{ ...styles.score1, ...(gamePaused ? styles.opaque : {}) }}>
+          <div style={{ fontSize: '1.5em' }}>Player 1 ({paddle1Score})</div>
+          <div>Use &larr; and &rarr; to move your paddle</div>
+        </div>
+        <div key='score2' style={{ ...styles.score2, ...(gamePaused ? styles.opaque : {}) }}>
+          <div style={{ fontSize: '1.5em' }}>Player 2 ({paddle2Score})</div>
+          <div>Use Z and X to move your paddle</div>
+        </div>
+        <div style={styles.diagnostic}>
+          Game Speed: <input style={styles.input} type='number' min={1} max={5} value={gameSpeed} onChange={this.setGameSpeed} />
+          <pre key='diagnostic'>
+            {JSON.stringify(this.props, null, 2)}
+          </pre>
+        </div>
       </div>
     )
+  }
+}
+
+const scoreStyles = {
+  position: 'absolute',
+  color: 'white',
+  fontSize: '1em',
+  padding: '1em',
+  textAlign: 'right',
+  opacity: 0.2,
+  transition: 'opacity 0.25s',
+  ':hover': {
+    opacity: 1
+  }
+}
+
+const styles = {
+  diagnostic: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    overflow: 'auto',
+    margin: 0,
+    padding: '1em',
+    backgroundColor: '#eee',
+    transition: 'opacity 0.25s',
+    opacity: 0.1,
+    ':hover': {
+      opacity: 0.9
+    }
+  },
+  score1: {
+    ...scoreStyles,
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#a40000'
+  },
+  score2: {
+    ...scoreStyles,
+    top: 0,
+    right: 0,
+    backgroundColor: '#0000a4'
+  },
+  opaque: {
+    opacity: 1
+  },
+  input: {
+    fontSize: '1em',
+    margin: '0.5em',
+    padding: '0.25em'
   }
 }
 
@@ -145,6 +218,7 @@ const mapStateToProps = (state) => state
 
 const mapDispatchToProps = (dispatch) => ({
   setGamePaused: makeDispatcher(dispatch, setGamePaused),
+  setGameSpeed: makeDispatcher(dispatch, setGameSpeed),
   setPaddle1Velocity: makeDispatcher(dispatch, setPaddle1Velocity),
   setPaddle2Velocity: makeDispatcher(dispatch, setPaddle2Velocity),
   setWindowSize: makeDispatcher(dispatch, setWindowSize),

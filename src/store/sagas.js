@@ -2,16 +2,21 @@ import { mapValues, pickBy } from 'lodash'
 import { all, put, select, takeEvery } from 'redux-saga/effects'
 import Vector from 'victor'
 import makeAction from './helpers/makeAction'
+import initialState from './initialState'
 import {
+  INCREMENT_PADDLE1_SCORE,
+  INCREMENT_PADDLE2_SCORE,
+  REQUEST_COLLISION_CHECK,
+  REQUEST_UPDATE_GAME_STATE,
+  RESET_GAME,
   SET_BALL_POSITION,
   SET_BALL_VELOCITY,
+  SET_GAME_PAUSED,
   SET_PADDLE1_POSITION,
   SET_PADDLE1_VELOCITY,
   SET_PADDLE2_POSITION,
   SET_PADDLE2_VELOCITY,
-  SET_WINDOW_SIZE,
-  REQUEST_UPDATE_GAME_STATE,
-  REQUEST_COLLISION_CHECK
+  SET_WINDOW_SIZE
 } from './types'
 
 function * updateGameState ({ payload: timeInterval }) {
@@ -30,7 +35,7 @@ function * updateGameState ({ payload: timeInterval }) {
     paddle2Velocity
   } = mapValues(vectors, Vector.fromObject)
 
-  const timeMultiplier = timeInterval * 60 / 1000
+  const timeMultiplier = timeInterval * 60 / 1000 * state.gameSpeed
 
   const ballPositionNext = ballPosition.add(ballVelocity.multiplyScalar(timeMultiplier))
   const paddle1PositionNext = paddle1Position.add(paddle1Velocity.multiplyScalar(timeMultiplier))
@@ -52,8 +57,8 @@ function * watchrequestUpdateGameState () {
 const getRectBounds = ({ x, y, width, height }) => {
   const left = x - width / 2
   const right = x + width / 2
-  const top = y + height / 2
-  const bottom = y - height / 2
+  const top = y - height / 2
+  const bottom = y + height / 2
   return { left, right, top, bottom }
 }
 
@@ -63,8 +68,8 @@ const collisionRects = (rect1, rect2) => {
 
   const leftOverlapsRight = rect1Bounds.left < rect2Bounds.right
   const rightOverlapsLeft = rect1Bounds.right > rect2Bounds.left
-  const bottomOverlapsTop = rect1Bounds.bottom < rect2Bounds.top
-  const topOverlapsBottom = rect1Bounds.top > rect2Bounds.bottom
+  const bottomOverlapsTop = rect1Bounds.bottom > rect2Bounds.top
+  const topOverlapsBottom = rect1Bounds.top < rect2Bounds.bottom
 
   return leftOverlapsRight && rightOverlapsLeft && bottomOverlapsTop && topOverlapsBottom
 }
@@ -77,6 +82,16 @@ const collisionLeft = (rect, windowWidth) => {
 const collisionRight = (rect, windowWidth) => {
   const rectBounds = getRectBounds(rect)
   return rectBounds.right > windowWidth / 2
+}
+
+const collisionTop = (rect, windowHeight) => {
+  const rectBounds = getRectBounds(rect)
+  return rectBounds.top < -windowHeight / 2
+}
+
+const collisionBottom = (rect, windowHeight) => {
+  const rectBounds = getRectBounds(rect)
+  return rectBounds.bottom > windowHeight / 2
 }
 
 const makeRect = ({ x, y }, { x: width, y: height }) => ({ x, y, width, height })
@@ -146,6 +161,16 @@ function * collisionCheck () {
       put(makeAction(SET_PADDLE2_POSITION, { x: windowSize.width / 2 - paddle2.width / 2, y: paddle2.y }))
     ])
   }
+
+  if (collisionTop(ball, windowSize.height)) {
+    yield put(makeAction(INCREMENT_PADDLE1_SCORE))
+    yield put(makeAction(RESET_GAME))
+  }
+
+  if (collisionBottom(ball, windowSize.height)) {
+    yield put(makeAction(INCREMENT_PADDLE2_SCORE))
+    yield put(makeAction(RESET_GAME))
+  }
 }
 
 function * watchRequestCollisionCheck () {
@@ -168,10 +193,32 @@ function * watchWindowResize () {
   yield takeEvery(SET_WINDOW_SIZE, setPaddleDistance)
 }
 
+function * resetGame () {
+  const {
+    paddle1Position,
+    paddle2Position
+  } = yield select()
+
+  yield all([
+    put(makeAction(SET_BALL_POSITION, initialState.ballPosition)),
+    put(makeAction(SET_BALL_VELOCITY, initialState.ballVelocity)),
+    put(makeAction(SET_PADDLE1_POSITION, { x: initialState.paddle1Position.x, y: paddle1Position.y })),
+    put(makeAction(SET_PADDLE1_VELOCITY, initialState.paddle1Velocity)),
+    put(makeAction(SET_PADDLE2_POSITION, { x: initialState.paddle2Position.x, y: paddle2Position.y })),
+    put(makeAction(SET_PADDLE2_VELOCITY, initialState.paddle2Velocity)),
+    put(makeAction(SET_GAME_PAUSED, initialState.gamePaused))
+  ])
+}
+
+function * watchResetGame () {
+  yield takeEvery(RESET_GAME, resetGame)
+}
+
 export default function * sagas () {
   yield all([
     watchrequestUpdateGameState(),
     watchRequestCollisionCheck(),
-    watchWindowResize()
+    watchWindowResize(),
+    watchResetGame()
   ])
 }
