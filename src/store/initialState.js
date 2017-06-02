@@ -5,7 +5,7 @@ const initialState = {
   ballRadius: 10,
   ballVelocity: { x: Math.cos(toRadians(60)), y: Math.sin(toRadians(60)) },
   gamePaused: true,
-  gameSpeed: 1,
+  gameSpeed: 3,
   paddle1Dimensions: { x: 100, y: 20 },
   paddle1Position: { x: 0, y: 100 },
   paddle1Score: 0,
